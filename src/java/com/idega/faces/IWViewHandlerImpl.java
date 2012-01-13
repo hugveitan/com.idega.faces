@@ -19,6 +19,7 @@ import java.util.logging.Logger;
 
 import javax.faces.FacesException;
 import javax.faces.application.ViewHandler;
+import javax.faces.application.ViewHandlerWrapper;
 import javax.faces.component.UIComponent;
 import javax.faces.component.UIViewRoot;
 import javax.faces.context.FacesContext;
@@ -51,7 +52,7 @@ import com.idega.util.FacesUtil;
  * @author <a href="mailto:tryggvil@idega.com">tryggvil</a>
  * @version $Revision: 1.15 $
  */
-public class IWViewHandlerImpl extends ViewHandler{
+public class IWViewHandlerImpl extends ViewHandlerWrapper {
 	
 	//private static Logger log = Logger.getLogger(IWViewHandlerImpl.class);
 	private static Logger log = Logger.getLogger(IWViewHandlerImpl.class.getName());
@@ -60,6 +61,8 @@ public class IWViewHandlerImpl extends ViewHandler{
 	private ViewHandler jspViewHandler;
 	private ViewHandler faceletsViewHandler;
 //	private ViewHandler iceFacesViewHandler;
+	
+	private static final String IS_IW_LEGACY_REQUEST = "Idegaweb.IWViewHandlerImpl.IS_IW_LEGACY_REQUEST";
 	
 	public IWViewHandlerImpl(){
 		log.info("Loading IWViewHandlerImpl");
@@ -151,30 +154,72 @@ public class IWViewHandlerImpl extends ViewHandler{
 			throw new RuntimeException ("No ViewHandler Found to create View");
 		}
 	}
-
-
 	
-	private ViewHandler getViewHandlerForContext(FacesContext ctx) {		
-		ViewNode node = getViewManager().getViewNodeForContext(ctx);
-		
-		if(node != null)
-			if(node.getViewNodeBase() == ViewNodeBase.JSP)
-				return jspViewHandler;
-			else if(node.getViewNodeBase() == ViewNodeBase.FACELET)
-				return faceletsViewHandler;
-/*			else if(node.getViewNodeBase() == ViewNodeBase.ICEFACE)
-				return iceFacesViewHandler;
-*/
-			else
-				return node.getViewHandler();
-		
-		
-		if(getParentViewHandler() != null)
-			return getParentViewHandler();
-		
-		throw new RuntimeException ("No parent ViewHandler");
+	@Override
+	public ViewHandler getWrapped() {
+		return getParentViewHandler();
 	}
 	
+	
+	private ViewHandler getViewHandlerForContext(FacesContext ctx) {
+		// Since this method could be called many times we save it
+        //on request map so the first time is calculated it remains
+        //alive until the end of the request
+        Boolean isLegacyRequest = (Boolean) ctx.getAttributes().get(IS_IW_LEGACY_REQUEST);
+
+        if(isLegacyRequest == null){
+        	if(!isReservedIWContext(ctx)){
+        		isLegacyRequest = Boolean.FALSE;
+    		} else {
+    			isLegacyRequest = Boolean.TRUE;
+    		}
+        	ctx.getAttributes().put(IS_IW_LEGACY_REQUEST,isLegacyRequest);
+        }
+        
+        if (!isLegacyRequest) {
+        	return getParentViewHandler();
+        } else {
+    		ViewNode node = getViewManager().getViewNodeForContext(ctx);
+    		
+    		if(node != null)
+    			if(node.getViewNodeBase() == ViewNodeBase.JSP)
+    				return jspViewHandler;
+    			else if(node.getViewNodeBase() == ViewNodeBase.FACELET)
+    				return faceletsViewHandler;
+    /*			else if(node.getViewNodeBase() == ViewNodeBase.ICEFACE)
+    				return iceFacesViewHandler;
+    */
+    			else
+    				return node.getViewHandler();
+    		
+			return getParentViewHandler();
+		}
+	}
+	
+	private boolean isReservedIWContext(FacesContext ctx) {
+		String uri = getRequestUriWithoutContext(ctx);
+		if(uri == null || "/".equals(uri)){
+			return false;
+		}
+		int first = ((uri.startsWith("/"))?1:0);
+		int last = uri.indexOf('/',first);
+		String cPath;
+		if(last < 0){
+			cPath = uri.substring(first);
+		} else {
+			cPath = uri.substring(first, last);
+		}
+		return getViewManager().getApplicationRoot().hasChild(cPath);
+	}
+	
+	/**
+	 * @param ctx
+	 * @return
+	 */
+	public String getRequestUriWithoutContext(FacesContext ctx) {
+		return FacesUtil.getRequestUri(ctx,false);
+	}
+
 	/**
 	 * @param url
 	 * @return
@@ -401,6 +446,9 @@ public class IWViewHandlerImpl extends ViewHandler{
 	 * @return Returns the defaultViewHandler.
 	 */
 	public ViewHandler getParentViewHandler() {
+		if(this.parentViewHandler == null){
+			throw new RuntimeException ("No parent ViewHandler");
+		}
 		return this.parentViewHandler;
 	}
 	/**
