@@ -12,7 +12,7 @@ package com.idega.faces.componentbased;
 import java.io.StringWriter;
 import javax.faces.FacesException;
 import javax.faces.context.ResponseWriter;
-import org.apache.myfaces.shared_impl.renderkit.html.HtmlResponseWriterImpl;
+import org.apache.myfaces.shared.renderkit.html.HtmlResponseWriterImpl;
 
 
 /**
