@@ -15,6 +15,7 @@ import java.util.Map;
 import javax.faces.context.ResponseStream;
 import javax.faces.context.ResponseWriter;
 import javax.faces.render.RenderKit;
+import javax.faces.render.RenderKitWrapper;
 import javax.faces.render.Renderer;
 import javax.faces.render.ResponseStateManager;
 import org.apache.myfaces.renderkit.html.HtmlRenderKitImpl;
@@ -25,7 +26,7 @@ import org.apache.myfaces.renderkit.html.HtmlRenderKitImpl;
  * @author <a href="mailto:tryggvil@idega.com">tryggvil</a>
  * @version 1.0
  */
-public class BaseRenderKit extends RenderKit {
+public class BaseRenderKit extends RenderKitWrapper {
 
 	private static String DOT=".";
 	
@@ -34,6 +35,11 @@ public class BaseRenderKit extends RenderKit {
 	
 	public BaseRenderKit(RenderKit kit){
 		this.backingRenderKit=kit;
+	}
+	
+	@Override
+	public RenderKit getWrapped(){
+		return backingRenderKit;
 	}
 	
 	private String key(String family,String rendererType){
@@ -50,21 +56,7 @@ public class BaseRenderKit extends RenderKit {
 		getRendererMap().put(key(arg0,arg1),arg2);
 	}
 
-	/**
-	 * @param arg0
-	 * @param arg1
-	 * @param arg2
-	 * @return
-	 */
-	public ResponseWriter createResponseWriter(Writer arg0, String arg1, String arg2) {
-		return this.backingRenderKit.createResponseWriter(arg0, arg1, arg2);
-	}
-	/* (non-Javadoc)
-	 * @see java.lang.Object#equals(java.lang.Object)
-	 */
-	//public boolean equals(Object arg0) {
-	//	return backingRenderKit.equals(arg0);
-	//}
+
 	/**
 	 * @param arg0
 	 * @param arg1
@@ -72,19 +64,13 @@ public class BaseRenderKit extends RenderKit {
 	 */
 	public Renderer getRenderer(String family,String rendererType) {
 		//Try first to get the renderer from the backingRenderKit
-		Renderer renderer = this.backingRenderKit.getRenderer(family,rendererType);
+		Renderer renderer = getWrapped().getRenderer(family,rendererType);
 		if(renderer==null){
 			return (Renderer)getRendererMap().get(key(family,rendererType));
 		}
 		else{
 			return renderer;
 		}
-	}
-	/**
-	 * @return
-	 */
-	public ResponseStateManager getResponseStateManager() {
-		return this.backingRenderKit.getResponseStateManager();
 	}
 
 	
@@ -95,13 +81,5 @@ public class BaseRenderKit extends RenderKit {
 		}
 		return this.renderers;
 	}
-
-	/* (non-Javadoc)
-	 * @see javax.faces.render.RenderKit#createResponseStream(java.io.OutputStream)
-	 */
-	public ResponseStream createResponseStream(OutputStream out) {
-		return this.backingRenderKit.createResponseStream(out);
-	}
-	
 	
 }
