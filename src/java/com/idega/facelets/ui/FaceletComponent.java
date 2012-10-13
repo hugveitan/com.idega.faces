@@ -3,6 +3,7 @@ package com.idega.facelets.ui;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import javax.el.ELContext;
 import javax.el.ExpressionFactory;
@@ -11,6 +12,7 @@ import javax.faces.application.Application;
 import javax.faces.component.UIComponent;
 import javax.faces.component.UIParameter;
 import javax.faces.context.FacesContext;
+import javax.faces.component.UniqueIdVendor;
 
 import com.idega.presentation.IWBaseComponent;
 import com.idega.servlet.filter.IWBundleResourceFilter;
@@ -27,7 +29,7 @@ import org.apache.myfaces.view.facelets.FaceletFactory;
  * Last modified: $Date: 2008/02/14 21:29:08 $ by $Author: civilis $
  *
  */
-public class FaceletComponent extends IWBaseComponent {
+public class FaceletComponent extends IWBaseComponent implements UniqueIdVendor {
 	
 	private String faceletURI;
 	
@@ -125,4 +127,102 @@ public class FaceletComponent extends IWBaseComponent {
 		
 		this.faceletURI = faceletURI;
 	}
+	
+	
+    enum PropertyKeys
+    {
+         uniqueIdCounter
+    }
+    
+
+    public static final String UNIQUE_ID_PREFIX = "iw_id";
+    
+	 /**
+     * 
+     * {@inheritDoc}
+     * 
+     * @since 2.0
+     */
+    public String createUniqueId(FacesContext context, String seed)
+    {
+        StringBuilder bld = _getSharedStringBuilder(context);
+
+        Long uniqueIdCounter = (Long) getStateHelper().get(PropertyKeys.uniqueIdCounter);
+        uniqueIdCounter = (uniqueIdCounter == null) ? 0 : uniqueIdCounter;
+        getStateHelper().put(PropertyKeys.uniqueIdCounter, (uniqueIdCounter+1L));
+        // Generate an identifier for a component. The identifier will be prefixed with
+        // UNIQUE_ID_PREFIX, and will be unique within this UIViewRoot.
+        if(seed==null)
+        {
+            return bld.append(UNIQUE_ID_PREFIX).append(uniqueIdCounter).toString();    
+        }
+        // Optionally, a unique seed value can be supplied by component creators which
+        // should be included in the generated unique id.
+        else
+        {
+            return bld.append(UNIQUE_ID_PREFIX).append(seed).toString();
+        }
+    }
+    
+    /**
+     * <p>
+     * This gets a single FacesContext-local shared stringbuilder instance, each time you call
+     * _getSharedStringBuilder it sets the length of the stringBuilder instance to 0.
+     * </p><p>
+     * This allows you to use the same StringBuilder instance over and over.
+     * You must call toString on the instance before calling _getSharedStringBuilder again.
+     * </p>
+     * Example that works
+     * <pre><code>
+     * StringBuilder sb1 = _getSharedStringBuilder();
+     * sb1.append(a).append(b);
+     * String c = sb1.toString();
+     *
+     * StringBuilder sb2 = _getSharedStringBuilder();
+     * sb2.append(b).append(a);
+     * String d = sb2.toString();
+     * </code></pre>
+     * <br><br>
+     * Example that doesn't work, you must call toString on sb1 before
+     * calling _getSharedStringBuilder again.
+     * <pre><code>
+     * StringBuilder sb1 = _getSharedStringBuilder();
+     * StringBuilder sb2 = _getSharedStringBuilder();
+     *
+     * sb1.append(a).append(b);
+     * String c = sb1.toString();
+     *
+     * sb2.append(b).append(a);
+     * String d = sb2.toString();
+     * </code></pre>
+     *
+     */
+    static StringBuilder _getSharedStringBuilder()
+    {
+        return _getSharedStringBuilder(FacesContext.getCurrentInstance());
+    }
+
+    private static final String _STRING_BUILDER_KEY = "javax.faces.component.UIComponentBase.SHARED_STRING_BUILDER"+"_IW_INSTANCE";
+    
+    // TODO checkstyle complains; does this have to lead with __ ?
+    static StringBuilder _getSharedStringBuilder(FacesContext facesContext)
+    {
+        Map<Object, Object> attributes = facesContext.getAttributes();
+
+        StringBuilder sb = (StringBuilder) attributes.get(_STRING_BUILDER_KEY);
+
+        if (sb == null)
+        {
+            sb = new StringBuilder();
+            attributes.put(_STRING_BUILDER_KEY, sb);
+        }
+        else
+        {
+
+            // clear out the stringBuilder by setting the length to 0
+            sb.setLength(0);
+        }
+
+        return sb;
+    }
 }
