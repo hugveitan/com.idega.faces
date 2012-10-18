@@ -28,6 +28,7 @@ import org.apache.myfaces.view.facelets.FaceletFactory;
  *
  * Last modified: $Date: 2008/02/14 21:29:08 $ by $Author: civilis $
  *
+ *@deprecated This should not be used for new components since this violates JSF spec by building component tree for the component in render_view phase.  Since JSF 2.0 one can use composite components.
  */
 public class FaceletComponent extends IWBaseComponent implements UniqueIdVendor {
 	
@@ -146,10 +147,12 @@ public class FaceletComponent extends IWBaseComponent implements UniqueIdVendor 
     public String createUniqueId(FacesContext context, String seed)
     {
         StringBuilder bld = _getSharedStringBuilder(context);
+        
+        Map<Object, Object> attributes = context.getAttributes();
 
-        Long uniqueIdCounter = (Long) getStateHelper().get(PropertyKeys.uniqueIdCounter);
+        Long uniqueIdCounter = (Long) attributes.get(PropertyKeys.uniqueIdCounter);
         uniqueIdCounter = (uniqueIdCounter == null) ? 0 : uniqueIdCounter;
-        getStateHelper().put(PropertyKeys.uniqueIdCounter, (uniqueIdCounter+1L));
+        attributes.put(PropertyKeys.uniqueIdCounter, (uniqueIdCounter+1L));
         // Generate an identifier for a component. The identifier will be prefixed with
         // UNIQUE_ID_PREFIX, and will be unique within this UIViewRoot.
         if(seed==null)
